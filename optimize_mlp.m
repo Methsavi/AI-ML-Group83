@@ -72,7 +72,7 @@ for h = 1:numel(hiddenConfigs)
 
         % -------------------------
         % 4) Evaluate
-        % -------------------------
+        % --
         Yhat = netTrained(Xtest);
         [~, ypred] = max(Yhat, [], 1);
         ypred = ypred';
