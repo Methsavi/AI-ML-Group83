@@ -32,6 +32,4 @@ end
 
 % Save final dataset
 save("combined_dataset.mat", "allData");
-
-disp("All files imported successfully!!");
 disp("Combined data saved to combined_dataset.mat");
