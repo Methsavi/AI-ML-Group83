@@ -33,3 +33,6 @@ end
 % Save final dataset
 save("combined_dataset.mat", "allData");
 disp("Combined data saved to combined_dataset.mat");
+
+writetable(allData, "combined_dataset.csv");
+disp("Combined data also saved to combined_dataset.csv");
