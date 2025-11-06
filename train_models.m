@@ -53,3 +53,4 @@ fprintf("KNN Accuracy: %.2f%%\n", acc_knn * 100);
 save("trained_models.mat", "model_svm", "model_rf", "model_knn");
 
 fprintf("Models saved to trained_models.mat\n");
+fprintf("checking my git commit");
