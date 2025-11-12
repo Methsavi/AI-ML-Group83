@@ -1,30 +1,18 @@
-%% STEP 9: MODEL EVALUATION & VISUALIZATION
-% -------------------------------------------------------------
-% Loads:
-%   - trained_models.mat (SVM, Random Forest, KNN)
-%   - features_dataset.mat (features)
-%
-% Outputs:
-%   - Confusion matrices
-%   - Classification accuracy
-%   - Per-class performance
-%   - Model comparison table
-% -------------------------------------------------------------
+% Model evaluation and visualization
 
 clear; clc;
 
-%% Load models and dataset
 load("trained_models.mat");
 load("features_dataset.mat");
 
-%% Extract predictors and labels
+% Extract predictors and labels
 predictorNames = string(features.Properties.VariableNames);
 predictorNames = predictorNames(~ismember(predictorNames, ["User", "Day", "WindowID"]));
 
 X = features{:, predictorNames};
 Y = features.User;
 
-%% Manual Train-Test Split (same as Step 8)
+% Manual Train-Test Split
 n = length(Y);
 idx = randperm(n);
 
@@ -39,50 +27,47 @@ Ytrain = Y(trainIdx);
 Xtest  = X(testIdx, :);
 Ytest  = Y(testIdx);
 
-%% Evaluate each model
-% ----- SVM -----
+%  Evaluate each model
+% SVM
 pred_svm = predict(model_svm, Xtest);
 acc_svm = mean(pred_svm == Ytest);
 
-% ----- Random Forest -----
+% Random Forest
 [pred_rf, ~] = predict(model_rf, Xtest);
-pred_rf = str2double(pred_rf);  % convert labels
+pred_rf = str2double(pred_rf); 
 acc_rf = mean(pred_rf == Ytest);
 
-% ----- KNN -----
+% KNN
 pred_knn = predict(model_knn, Xtest);
 acc_knn = mean(pred_knn == Ytest);
 
-%% Display accuracy summary
-fprintf("\n--- MODEL ACCURACY ---\n");
-fprintf("SVM Accuracy: %.2f%%\n", acc_svm * 100);
-fprintf("Random Forest Accuracy: %.2f%%\n", acc_rf * 100);
-fprintf("KNN Accuracy: %.2f%%\n\n", acc_knn * 100);
+fprintf("Model accurasy \n \n");
+fprintf("SVM Accuracy is %.2f%%\n", acc_svm * 100);
+fprintf("Randon Forest Accuracy is %.2f%%\n", acc_rf * 100);
+fprintf("KNN Accuracy is %.2f%%\n\n", acc_knn * 100);
 
-%% Confusion Matrices
+% Confusion Matrics
 figure;
 confusionchart(Ytest, pred_rf);
 title("Random Forest Confusion Matrix");
 
 figure;
 confusionchart(Ytest, pred_svm);
-title("SVM Confusion Matrix");
+title("SVM Confusiob Matrix");
 
 figure;
 confusionchart(Ytest, pred_knn);
 title("KNN Confusion Matrix");
 
-%% Classification Report (per-class accuracy)
+% Classificasion Report (per-class accuracy)
 users = unique(Y);
 
-fprintf("--- PER-CLASS PERFORMANCE ---\n");
+fprintf("Performance of each class \n \n");
 for u = users'
     idxU = (Ytest == u);
-    accU = mean(pred_rf(idxU) == u);   % using best model RF
-    fprintf("User %d Accuracy: %.2f%%\n", u, accU * 100);
+    accU = mean(pred_rf(idxU) == u);
+    fprintf("User %d Accuracy is %.2f%%\n", u, accU * 100);
 end
 
-%% Save visuals as images
 saveas(gcf, "confusion_matrix_best_model.png");
-
 fprintf("\nEvaluation completed.\n");
