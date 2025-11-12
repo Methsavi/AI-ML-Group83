@@ -1,42 +1,31 @@
-%% cross_day_evaluation.m
-% Train on Day1, test on Day2 (cross-day generalisation check)
-% Saves results to mlp_crossday.mat
+% Train on Day1, test on Day2
 clear; clc; close all;
 rng(0);
 
-% ----------------------------
-% 0) Settings (change if needed)
-% ----------------------------
-% If you want to force a specific architecture, set forcedHiddenUnits = [100];
-% Otherwise leave empty to use bestHidden if present in mlp_randomsplit.mat or default 100.
 forcedHiddenUnits = [];  
 
-useInternalValidation = true;  % keep a small val split when training on Day1
+useInternalValidation = true; 
 trainAlg = 'trainscg';
 maxEpochs = 300;
 maxFail = 12;
 
-% ------------------
-% 1) Load data
-% ----------------------------
+% Load data
 if ~exist("features_dataset.mat", "file")
     error('features_dataset.mat not found in current folder. Put it in the project root.');
 end
-load("features_dataset.mat");    % expects 'features' table
+load("features_dataset.mat");   
 
-% Check Day column exists
 if ~ismember("Day", features.Properties.VariableNames)
     error('features table must contain a ''Day'' column.');
 end
 
-% ----------------------------
-% 2) Prepare predictors & labels
-% ----------------------------
+% Prepare predictors & labels
+
 predictorNames = string(features.Properties.VariableNames);
 predictorNames = predictorNames(~ismember(predictorNames, ["User","Day","WindowID"]));
-X_all = table2array(features(:, predictorNames));  % N x F
-Y_all = features.User;                             % N x 1
-Days_all = features.Day;                           % N x 1 (could be numeric or categorical or string)
+X_all = table2array(features(:, predictorNames));  
+Y_all = features.User;                             
+Days_all = features.Day;                           
 
 % ensure Days_all is numeric or categorical, convert categorical/strings to numeric indices
 if iscellstr(Days_all) || isstring(Days_all) || iscategorical(Days_all)
@@ -50,14 +39,13 @@ if numel(uniqueDays) < 2
     error('Need at least two different days for cross-day evaluation.');
 end
 
-% pick the first two distinct days (you can change order if needed)
+% pick the first two distinct days
 day1_value = uniqueDays(1);
 day2_value = uniqueDays(2);
 
 % create logical masks
 if isstring(uniqueDays) || iscellstr(uniqueDays) || iscategorical(uniqueDays)
-    trainMask = (Days_all == 1); % already converted to indices above
-    % ensure correct mapping:
+    trainMask = (Days_all == 1); 
     trainMask = (dayIdx == 1);
     testMask  = (dayIdx == 2);
 else
@@ -73,9 +61,8 @@ Ytest = Y_all(testMask);
 
 fprintf('Day1 samples (train): %d   Day2 samples (test): %d\n', size(Xtrain_raw,1), size(Xtest_raw,1));
 
-% ----------------------------
-% 3) Clean NaNs if any
-% ----------------------------
+%  Clean NaNs if any
+
 for c = 1:size(Xtrain_raw,2)
     col = Xtrain_raw(:,c);
     if any(isnan(col))
@@ -91,55 +78,45 @@ for c = 1:size(Xtest_raw,2)
     end
 end
 
-% ----------------------------
-% 4) Normalize using train stats (important)
-% ----------------------------
+% Normalize using train stats 
 mu = mean(Xtrain_raw,1);
 sigma = std(Xtrain_raw,[],1);
 sigma(sigma==0)=1;
 Xtrain = (Xtrain_raw - mu) ./ sigma;
-Xtest  = (Xtest_raw - mu) ./ sigma;  % use same mu/sigma
+Xtest  = (Xtest_raw - mu) ./ sigma;  
 
-% transpose for neural net toolbox (features x samples)
 Xtrain_t = Xtrain';
 Xtest_t  = Xtest';
 
-% ----------------------------
-% 5) Targets (one-hot)
-% ----------------------------
 allClasses = unique(Y_all);
 numClasses = numel(allClasses);
 
 % ensure labels are index-1..K or map them to 1..K
 [~, ~, Ytrain_idx] = unique(Ytrain_raw, 'stable');
 [~, ~, Ytest_idx]  = unique(Ytest, 'stable');
-% The above makes training/test have their own indexing; to ensure consistent mapping across train/test,
-% map using allClasses:
 [~, trainIdxMapped] = ismember(Ytrain_raw, allClasses);
 [~, testIdxMapped]  = ismember(Ytest, allClasses);
 
 Ttrain = full(ind2vec(trainIdxMapped'));
 Ttest  = full(ind2vec(testIdxMapped'));
 
-% ----------------------------
-% 6) Choose hidden units
-% ----------------------------
+% Choose hidden units
 hiddenUnits = [];
 if ~isempty(forcedHiddenUnits)
     hiddenUnits = forcedHiddenUnits;
 elseif exist("bestHidden","var") && ~isempty(bestHidden)
     hiddenUnits = bestHidden;
 elseif exist("hiddenUnits","var") && ~isempty(hiddenUnits)
-    % use loaded variable if present (no-op)
+    
 else
-    hiddenUnits = 100; % default fallback
+    hiddenUnits = 100; 
 end
 
 fprintf('Training MLP on Day1 with hidden units = %s\n', mat2str(hiddenUnits));
 
-% ----------------------------
-% 7) Build & train network
-% ----------------------------
+
+% Build & train network
+
 net = patternnet(hiddenUnits, trainAlg);
 if useInternalValidation
     net.divideParam.trainRatio = 70/100;
@@ -156,12 +133,11 @@ net.performFcn = 'crossentropy';
 
 [netTrained, tr] = train(net, Xtrain_t, Ttrain);
 
-% ----------------------------
-% 8) Evaluate on Day2 (external test)
-% ----------------------------
-Yhat_proba = netTrained(Xtest_t);       % numClasses x Ntest
-Yhat_proba = Yhat_proba';               % Ntest x numClasses
-[~, ypred] = max(Yhat_proba, [], 2);    % predicted class indices w.r.t allClasses indexing
+
+% Evaluate on Day2 
+Yhat_proba = netTrained(Xtest_t);       
+Yhat_proba = Yhat_proba';               
+[~, ypred] = max(Yhat_proba, [], 2);   
 ypred_labels = allClasses(ypred);
 
 acc = mean(ypred_labels == Ytest) * 100;
@@ -172,15 +148,12 @@ C = confusionmat(Ytest, ypred_labels);
 disp('Confusion matrix (rows=true, cols=predicted):');
 disp(C);
 
-% ----------------------------
-% 9) FAR / FRR / EER (same approach as earlier)
-% ----------------------------
-% Build genuine and impostor scores (probability mass for true user)
+% FAR / FRR / EER 
+
 genuineScores = zeros(numel(Ytest),1);
 impostorScores = [];
 
 for i = 1:numel(Ytest)
-    % find index of true user in allClasses
     trueIdx = find(allClasses == Ytest(i));
     genuineScores(i) = Yhat_proba(i, trueIdx);
     otherIdx = setdiff(1:numClasses, trueIdx);
@@ -211,9 +184,8 @@ legend('FAR','FRR','EER','Location','best');
 grid on;
 saveas(gcf, 'MLP_CrossDay_FAR_FRR.png');
 
-% ----------------------------
-% 10) Save results
-% ----------------------------
+% Save results
+
 mlp_crossday.net = netTrained;
 mlp_crossday.mu = mu;
 mlp_crossday.sigma = sigma;

@@ -1,13 +1,10 @@
-%% STEP 02 — Optimization Experiments for MLP
-% Tests different hidden layers, neurons, and train/test ratios
-% to find best-performing configuration.
+% Optimization Experiments for MLP
 
 clear; clc; rng(1);
 load("features_dataset.mat");
 
-% -------------------------
-% 1) Data preparation
-% -------------------------
+% Data preparation
+
 predictorNames = string(features.Properties.VariableNames);
 predictorNames = predictorNames(~ismember(predictorNames, ["User","Day","WindowID"]));
 
@@ -31,15 +28,13 @@ X = (X - mu) ./ sigma;
 
 numClasses = numel(unique(Y));
 
-% -------------------------
-% 2) Define experiment grid
-% -------------------------
+% Define experiment grid
 hiddenConfigs = {
     [20], [50], [100], ...
     [50 20], [100 50]
 };
 trainRatios = [0.6, 0.7, 0.8];
-algorithm = 'trainscg';  % or try 'trainlm' for smaller sets
+algorithm = 'trainscg'; 
 
 results = table();
 
@@ -57,9 +52,7 @@ for h = 1:numel(hiddenConfigs)
         Ttrain = full(ind2vec(Ytrain'));
         Ttest  = full(ind2vec(Ytest'));
 
-        % -------------------------
-        % 3) Build and train network
-        % -------------------------
+        % Build and train network
         net = patternnet(hiddenConfigs{h}, algorithm);
         net.divideParam.trainRatio = 70/100;
         net.divideParam.valRatio   = 15/100;
@@ -70,9 +63,7 @@ for h = 1:numel(hiddenConfigs)
 
         [netTrained, tr] = train(net, Xtrain, Ttrain);
 
-        % -------------------------
-        % 4) Evaluate
-        % --
+        % Evaluate
         Yhat = netTrained(Xtest);
         [~, ypred] = max(Yhat, [], 1);
         ypred = ypred';
@@ -91,14 +82,11 @@ for h = 1:numel(hiddenConfigs)
     end
 end
 
-% -------------------------
-% 5) Show and save results
-% -------------------------
 [~, bestIdx] = max(results.Accuracy);
 bestConfig = results(bestIdx, :);
-disp('--- Summary of all runs ---');
+disp('Summary of all runs');
 disp(results);
-disp('--- Best Configuration ---');
+disp('Best Configuration');
 disp(bestConfig);
 
 save("mlp_optimization_results.mat", "results", "bestConfig");
