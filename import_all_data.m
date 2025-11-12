@@ -1,8 +1,6 @@
-%% IMPORT ALL USER DATA (FD + MD)
-
 clear; clc;
 
-folder = "Dataset"; % folder name in your MATLAB project
+folder = "Dataset";
 
 files = dir(fullfile(folder, "*.csv"));
 
@@ -16,11 +14,10 @@ for i = 1:length(files)
     % Read CSV
     T = readtable(filePath);
 
-    % ---------- Extract User ID ----------
-    % Format = U<number>NW_<FD/MD>.csv
+    %Extract User ID
     tokens = regexp(fileName, 'U(\d+)NW_(FD|MD)\.csv', 'tokens');
     userID = str2double(tokens{1}{1});
-    dayType = tokens{1}{2}; % FD or MD
+    dayType = tokens{1}{2}; 
 
     % Add columns
     T.User = repmat(userID, height(T), 1);
@@ -30,7 +27,6 @@ for i = 1:length(files)
     allData = [allData; T];
 end
 
-% Save final dataset
 save("combined_dataset.mat", "allData");
 disp("Combined data saved to combined_dataset.mat");
 
