@@ -1,31 +1,27 @@
-% === Load trained MLP model results ===
+% Load trained MLP model results
+
+clear; clc;
+
 load('mlp_randomsplit.mat');
 
-% === Generate model predictions and probabilities ===
-Yhat_proba = net(Xtest);              % Predicted probabilities (numClasses x numSamples)
-[~, ypred] = max(Yhat_proba, [], 1);  % Predicted class indices
-
-% === Plot Confusion Matrix ===
+Yhat_proba = net(Xtest);              
+[~, ypred] = max(Yhat_proba, [], 1); 
+% Plot Confusion Matrix 
 figure;
 confusionchart(Ytest, ypred);
 title('Confusion Matrix - MLP Random Split');
 
-% === Compute ROC curve, AUC, FAR, FRR, and EER (one-vs-all per class) ===
+% Compute ROC curve, AUC, FAR, FRR, and EER
 numClasses = size(Yhat_proba, 1);
 AUC = zeros(numClasses, 1);
 EER = zeros(numClasses, 1);
 EER_threshold = zeros(numClasses, 1);
 
 for c = 1:numClasses
-    % Binary ground truth for class c
     targets_c = (Ytest == c);
-    % Predicted probabilities for class c
     scores_c = Yhat_proba(c, :)';
-    
-    % Compute ROC and AUC for this class
     [~, ~, ~, AUC(c)] = perfcurve(targets_c, scores_c, 1);
     
-    % Compute FAR and FRR for thresholds
     thresholds = linspace(0, 1, 100);
     FAR = zeros(size(thresholds));
     FRR = zeros(size(thresholds));
@@ -43,19 +39,18 @@ for c = 1:numClasses
     EER_threshold(c) = thresholds(idxEER);
 end
 
-% === Display AUC and EER results in a table ===
+% Display AUC and EER results
 disp('Performance Summary (AUC and EER per Class):');
-fprintf('-----------------------------------------------\n');
-fprintf(' Class |    AUC     |   EER     | Threshold\n');
-fprintf('-----------------------------------------------\n');
+fprintf(' \nClass |    AUC     |   EER     | Threshold\n\n');
+
 for c = 1:numClasses
     fprintf('  %3d   |  %.4f  |  %.4f  |  %.3f\n', c, AUC(c), EER(c), EER_threshold(c));
 end
-fprintf('-----------------------------------------------\n');
-fprintf('Mean AUC: %.4f\n', mean(AUC));
-fprintf('Mean EER: %.4f\n', mean(EER));
 
-% === Plot AUC per class (Bar chart) ===
+fprintf('\nMean AUC is %.4f\n', mean(AUC));
+fprintf('Mean EER is %.4f\n', mean(EER));
+
+% Plot AUC per class 
 figure;
 bar(AUC);
 xlabel('Class Index');
@@ -66,7 +61,7 @@ ylim([0.95 1.01]);
 text(1:numClasses, AUC, string(round(AUC, 4)), 'HorizontalAlignment','center', ...
      'VerticalAlignment','bottom', 'FontSize',8);
 
-% === Plot EER per class (Bar chart) ===
+% Plot EER per class
 figure;
 bar(EER);
 xlabel('Class Index');
@@ -77,8 +72,8 @@ ylim([0 max(EER)*1.2]);
 text(1:numClasses, EER, string(round(EER, 4)), 'HorizontalAlignment','center', ...
      'VerticalAlignment','bottom', 'FontSize',8);
 
-% === Plot FAR and FRR for one example class ===
-exampleClass = 1; % Change to visualize a specific class
+% Plot FAR and FRR for one example class 
+exampleClass = 1; 
 targets = (Ytest == exampleClass);
 outputs = Yhat_proba(exampleClass, :)';
 

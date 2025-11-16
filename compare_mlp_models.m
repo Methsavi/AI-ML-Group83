@@ -1,16 +1,13 @@
-%% compare_mlp_models.m
-% Compare MLP configurations (hidden layers vs accuracy)
+% Compare MLP configurations 
 clear; clc;
 
-% --- Load optimization results ---
-load('mlp_optimization_results.mat'); % contains "results"
+load('mlp_optimization_results.mat'); 
 
-% --- Convert to table if struct array ---
 if isstruct(results)
     results = struct2table(results);
 end
 
-% --- Extract columns ---
+% Extract columns
 hiddenLayers = results.HiddenLayers;
 accuracies = results.Accuracy;
 
@@ -25,11 +22,11 @@ for i = 1:numel(hiddenLayers)
     end
 end
 
-% --- Combine duplicates: average accuracy for same config ---
+% Combine duplicates: average accuracy for same config 
 [uniqueConfigs, ~, idx] = unique(hiddenLayers);
 meanAccuracies = accumarray(idx, accuracies, [], @mean);
 
-% --- Plot bar chart ---
+% Plot bar chart
 figure;
 bar(categorical(uniqueConfigs), meanAccuracies);
 xlabel('Hidden Layer Configuration');
@@ -37,7 +34,7 @@ ylabel('Accuracy (%)');
 title('Comparison of MLP Configurations');
 grid on;
 
-% --- Annotate values on bars ---
+% Annotate values on bars 
 text(1:numel(uniqueConfigs), meanAccuracies, ...
     string(round(meanAccuracies, 2)), ...
     'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'FontSize',8);

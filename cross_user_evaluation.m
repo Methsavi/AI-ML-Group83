@@ -1,27 +1,19 @@
-%% cross_user_evaluation.m
 % Leave-One-User-Out (Cross-User) Evaluation
-% Each user is left out once for testing; others are used for training.
-% Results: accuracy + EER per user, average metrics, and bar plots.
 
 clear; clc; close all;
 rng(0);
 
-% -----------------------------
-% 0) Configurations
-% -----------------------------
+% Configurations
 hiddenUnits = 100;
 trainAlg = 'trainscg';
 maxEpochs = 300;
 maxFail = 12;
 
-% -----------------------------
-% 1) Load Dataset
-% -----------------------------
 if ~exist('features_dataset.mat', 'file')
     error('features_dataset.mat not found in current folder.');
 end
 
-load('features_dataset.mat');   % expects 'features' table
+load('features_dataset.mat');  
 
 if ~ismember("User", features.Properties.VariableNames)
     error('features table must contain a "User" column.');
@@ -29,9 +21,6 @@ end
 
 fprintf('Loaded dataset with %d samples and %d features.\n', size(features,1), size(features,2)-1);
 
-% -----------------------------
-% 2) Prepare data
-% -----------------------------
 predictorNames = string(features.Properties.VariableNames);
 predictorNames = predictorNames(~ismember(predictorNames, ["User","Day","WindowID"]));
 
@@ -46,9 +35,7 @@ fprintf('Found %d unique users.\n', numUsers);
 acc_per_user = zeros(numUsers,1);
 eer_per_user = zeros(numUsers,1);
 
-% -----------------------------
-% 3) Cross-User Loop
-% -----------------------------
+% Cross-User Loop
 for u = 1:numUsers
     testUser = allUsers(u);
     trainMask = (Y_all ~= testUser);
@@ -66,7 +53,6 @@ for u = 1:numUsers
     Xtrain = (Xtrain_raw - mu) ./ sigma;
     Xtest  = (Xtest_raw - mu) ./ sigma;
 
-    % Transpose for Neural Net Toolbox
     Xtrain_t = Xtrain';
     Xtest_t  = Xtest';
 
@@ -77,9 +63,8 @@ for u = 1:numUsers
     [~, testIdx]  = ismember(Ytest, trainClasses);
     Ttrain = full(ind2vec(trainIdx'));
 
-    % -----------------------------
-    % 4) Train Model
-    % -----------------------------
+    
+    % Train Model
     net = patternnet(hiddenUnits, trainAlg);
     net.trainParam.epochs = maxEpochs;
     net.trainParam.max_fail = maxFail;
@@ -90,21 +75,18 @@ for u = 1:numUsers
 
     [netTrained, ~] = train(net, Xtrain_t, Ttrain);
 
-    % -----------------------------
-    % 5) Predict on test user
-    % -----------------------------
+    % Predict on test user
+    
     Yhat_proba = netTrained(Xtest_t);
     Yhat_proba = Yhat_proba';
     [~, ypred] = max(Yhat_proba, [], 2);
     ypred_labels = trainClasses(ypred);
 
-    % Accuracy (usually 0 if unseen)
+    % Accuracy 
     acc = mean(ypred_labels == Ytest) * 100;
     acc_per_user(u) = acc;
 
-    % -----------------------------
-    % 6) FAR / FRR / EER
-    % -----------------------------
+    % FAR / FRR / EER
     if ismember(testUser, trainClasses)
         genuineScores = zeros(numel(Ytest),1);
         impostorScores = [];
@@ -133,17 +115,11 @@ for u = 1:numUsers
     fprintf('User %s -> Acc = %.2f%% | EER = %.2f%%\n', string(testUser), acc, eer_per_user(u));
 end
 
-% -----------------------------
-% 7) Summary Results
-% -----------------------------
 validEER = eer_per_user(~isnan(eer_per_user));
-fprintf('\n===== Cross-User Summary =====\n');
-fprintf('Mean Accuracy (%%): %.2f\n', mean(acc_per_user));
-fprintf('Mean EER (%%): %.2f\n', mean(validEER));
+fprintf('\n Cross-User Summary \n');
+fprintf('Mean Accuracy (%%) is %.2f\n', mean(acc_per_user));
+fprintf('Mean EER (%%) is %.2f\n', mean(validEER));
 
-% -----------------------------
-% 8) Save & Plot
-% -----------------------------
 save('mlp_crossuser.mat', 'acc_per_user', 'eer_per_user', 'allUsers');
 
 figure;
